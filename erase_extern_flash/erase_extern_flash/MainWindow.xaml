@@ -1,0 +1,80 @@
+﻿<Window x:Class="erase_extern_flash.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:eraseExternFlash="clr-namespace:erase_extern_flash"
+        Title="擦除历史记录" Height="350" Width="525"
+        WindowStyle="None" AllowsTransparency="True" Background="{x:Null}"
+        WindowStartupLocation="CenterScreen">
+    <!-- http://www.cnblogs.com/jane850113/p/6134455.html -->
+    <!-- http://www.cnblogs.com/yigedaizi/p/4523217.html -->
+    <Border Height="Auto">
+        <Border.Background>
+            <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                <GradientStop Color="#FFD9E1EE" Offset="1"/>
+                <GradientStop Color="#FF3281C3" Offset="0"/>
+            </LinearGradientBrush>
+        </Border.Background>
+        
+        <Grid Name="grid1" ShowGridLines="False">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="30" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="10" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="10" />
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3">
+                <DockPanel LastChildFill="True">
+                    <DockPanel x:Name="Header" LastChildFill="True" Height="30" VerticalAlignment="Top" DockPanel.Dock="Top">
+                        <Button x:Name="btnClose" Style="{StaticResource btnCloseStyle}" Click="btnX_Click" DockPanel.Dock="Right" Margin="0,0,8,0"/>
+                        <Button x:Name="btnMin" Style="{StaticResource btnMiniStyle}" Click="btnMin_Click" DockPanel.Dock="Right" Margin="0,0,10,0"/>
+
+                        <Label Name="lblCaption" Foreground="White"  FontSize="14" FontFamily="Microsoft YaHei UI">擦除历史记录 V1.4</Label>
+                    </DockPanel>
+                </DockPanel>
+            </Grid>
+
+            <Grid Grid.Row="1" Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="1*" />
+                    <RowDefinition Height="1*" />
+                    <RowDefinition Height="1*" />
+                    <RowDefinition Height="1*" />
+                    <RowDefinition Height="1*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="8*" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Margin="6, 0, 5, 5">BCU型号</TextBlock>
+                <TextBlock Grid.Row="0" Grid.Column="1" Margin="0, 0, 0, 5" Text="{Binding Path=devModel}"/>
+                
+                <TextBlock Grid.Row="1" Grid.Column="0" Margin="6, 0, 5, 5">HWID</TextBlock>
+                <TextBlock Grid.Row="1" Grid.Column="1" Margin="0, 0, 0, 5" Text="{Binding Path=hwId}"/>
+                
+                <TextBlock Grid.Row="2" Grid.Column="0" Margin="6, 0, 5, 5">FWID</TextBlock>
+                <TextBlock Grid.Row="2" Grid.Column="1" Margin="0, 0, 0, 5" Text="{Binding Path=fwId}"/>
+                
+                <TextBlock Grid.Row="3" Grid.Column="0" Margin="6, 0, 5, 5">硬件版本号</TextBlock>
+                <TextBlock Grid.Row="3" Grid.Column="1" Margin="0, 0, 0, 5" Text="{Binding Path=hwVersion}"/>
+                
+                <TextBlock Grid.Row="4" Grid.Column="0" Margin="6, 0, 5, 5">软件版本号</TextBlock>
+                <TextBlock Grid.Row="4" Grid.Column="1" Margin="0, 0, 0, 5" Text="{Binding Path=swVersion}"/>
+            </Grid>
+
+            <!-- http://blog.csdn.net/iamsupercola/article/details/7039542 -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="3" Grid.Column="1">
+                <Button Content="擦除" Name="btnErase" Width="60" Margin="5" Click="btnErase_Click" />
+                <Button Content="退出" Name="btnCancel" Width="60" Margin="5" Click="btnCancel_Click" />
+            </StackPanel>
+
+        </Grid>
+    </Border>
+</Window>

@@ -1,0 +1,6 @@
+bin
+*.suo
+obj
+PROJECT_ASSISTANT
+rar
+usp10.pdb
