@@ -1,0 +1,59 @@
+﻿<Window x:Class="SlaveIdConfigNet2Wpf.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:viewmodel="clr-namespace:SlaveIdConfigNet2Wpf.viewModel"
+        Title="MainWindow" Height="350" Width="525">
+
+    <Grid HorizontalAlignment="Stretch" ShowGridLines="False">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="10"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="10"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="10"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="10"/>
+        </Grid.ColumnDefinitions>
+        
+        <Grid Grid.Row="1" Grid.Column="1">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
+                <Label Content="更新从机列表" Width="Auto" HorizontalAlignment="Left" />
+                <Button Name="BtnUpdateBmu" Content="开始" HorizontalAlignment="Center" 
+                        Command="{Binding broadcastCommand}" />
+            </StackPanel>
+        </Grid>
+        
+        <Grid Grid.Row="2" Grid.Column="1">
+            <ListBox Name="lbMain" HorizontalContentAlignment="Stretch"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Stretch" Width="Auto">
+                            <!-- bmu's id -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
+                                <Label Content="ID" VerticalAlignment="Center" HorizontalAlignment="Left" Width="30" />
+                                <ComboBox Width="100" Height="22" ItemsSource="{Binding rxTpIfMapList}"
+                                          SelectedValue="{Binding selectedTpIfMap, Mode=TwoWay , UpdateSourceTrigger=PropertyChanged}"
+                                          DisplayMemberPath="tpId" />
+                            </StackPanel>
+
+                            <!-- bmu infomation -->
+                            <DataGrid x:Name="dataGrid" AutoGenerateColumns="False" HorizontalAlignment="Stretch"
+                                      VerticalAlignment="Center" CanUserAddRows="False" SelectionUnit="Cell"
+                                      HeadersVisibility="None" ItemsSource="{Binding Path=bcuSttList, Mode=OneWay}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Binding="{Binding key}" Width="100" IsReadOnly="True" />
+                                    <DataGridTextColumn Binding="{Binding value}" Width="*" IsReadOnly="True" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+        
+    </Grid>
+</Window>
