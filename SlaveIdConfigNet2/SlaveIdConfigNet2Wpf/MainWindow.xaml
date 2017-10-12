@@ -2,13 +2,15 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:viewmodel="clr-namespace:SlaveIdConfigNet2Wpf.viewModel"
-        Title="MainWindow" Height="350" Width="525">
+        Title="BMS从机ID配置工具" Height="456" Width="658.15" 
+        WindowStartupLocation="CenterScreen" ResizeMode="NoResize">
 
     <Grid HorizontalAlignment="Stretch" ShowGridLines="False">
         <Grid.RowDefinitions>
             <RowDefinition Height="10"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="10"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
@@ -18,10 +20,12 @@
         </Grid.ColumnDefinitions>
         
         <Grid Grid.Row="1" Grid.Column="1">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
-                <Label Content="更新从机列表" Width="Auto" HorizontalAlignment="Left" />
-                <Button Name="BtnUpdateBmu" Content="开始" HorizontalAlignment="Center" 
-                        Command="{Binding broadcastCommand}" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch" FlowDirection="RightToLeft">
+                <!--<Label Content="更新从机列表" Width="Auto" HorizontalAlignment="Left" />-->
+                <Button Name="BtnUpdateBmu" Content="更新从机列表" HorizontalAlignment="Center"
+                       Margin="3, 3, 0, 3" Command="{Binding broadcastCommand}" />
+                <Button Name="BtnSetAllBmuIds" Content="设置所有从机ID" HorizontalAlignment="Center"
+                        Margin="3, 3, 0, 3" Command="{Binding setAllBmuIdCommand}" />
             </StackPanel>
         </Grid>
         
@@ -44,8 +48,8 @@
                                       VerticalAlignment="Center" CanUserAddRows="False" SelectionUnit="Cell"
                                       HeadersVisibility="None" ItemsSource="{Binding Path=bcuSttList, Mode=OneWay}">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Binding="{Binding key}" Width="100" IsReadOnly="True" />
-                                    <DataGridTextColumn Binding="{Binding value}" Width="*" IsReadOnly="True" />
+                                    <DataGridTextColumn Binding="{Binding infoKey}" Width="100" IsReadOnly="True" />
+                                    <DataGridTextColumn Binding="{Binding infoValue}" Width="*" IsReadOnly="True" />
                                 </DataGrid.Columns>
                             </DataGrid>
 
@@ -53,6 +57,25 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
+        </Grid>
+        
+        <Grid Grid.Row="3" Grid.Column="1">
+            <StatusBar>
+                <!--<StatusBarItem DockPanel.Dock="Right">
+                    <TextBlock>Go!</TextBlock>
+                </StatusBarItem>
+                <StatusBarItem DockPanel.Dock="Right">
+                    <TextBlock>Set</TextBlock>
+                </StatusBarItem>
+                <StatusBarItem DockPanel.Dock="Right">
+                    <ProgressBar Value="30" Width="80" Height="18" />
+                </StatusBarItem>-->
+                
+                <!-- Fill last child is true by default -->
+                <StatusBarItem>
+                    <TextBlock Name="tbErrorInfo" Text="{Binding runErrorInfomation}"/>
+                </StatusBarItem>
+            </StatusBar>
         </Grid>
         
     </Grid>

@@ -7,12 +7,12 @@ using System.Windows;
 // 有关程序集的常规信息通过以下
 // 特性集控制。更改这些特性值可修改
 // 与程序集关联的信息。
-[assembly: AssemblyTitle( "SlaveIdConfigNet2Wpf" )]
+[assembly: AssemblyTitle( "BMS从机ID配置" )]
 [assembly: AssemblyDescription( "" )]
 [assembly: AssemblyConfiguration( "" )]
-[assembly: AssemblyCompany( "Microsoft" )]
-[assembly: AssemblyProduct( "SlaveIdConfigNet2Wpf" )]
-[assembly: AssemblyCopyright( "Copyright © Microsoft 2017" )]
+[assembly: AssemblyCompany( "优蛋科技" )]
+[assembly: AssemblyProduct( "SlaveIdConfigNetV2" )]
+[assembly: AssemblyCopyright( "Copyright © UDAN 2017" )]
 [assembly: AssemblyTrademark( "" )]
 [assembly: AssemblyCulture( "" )]
 

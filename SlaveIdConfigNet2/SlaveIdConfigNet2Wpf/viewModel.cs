@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Windows;
 using System.Windows.Input;
 using slave_uds;
 using SlaveIdConfigNet2;
@@ -16,9 +17,9 @@ using uds_comm.interop;
 namespace SlaveIdConfigNet2Wpf.viewModel 
 {
 
-	#region observableObject
+	#region viewModelBase
 
-	public class observableObject : INotifyPropertyChanged {
+	public class viewModelBase : INotifyPropertyChanged {
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		protected void raisePropertyChanged( string propertyName ) {
@@ -54,7 +55,7 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 	}
 
 	public class delegateCommandNoParameter : ICommand {
-		public Action _execute_command = null;		// A method prototype without return value, without param.
+		public Action _execute_command = null;		// A method prototype without return infoValue, without param.
 		public Func<bool> _can_execute_command = null; // A method prototype return a bool type.
 		public event EventHandler CanExecuteChanged;
 
@@ -84,12 +85,70 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 
 	#endregion
 
-	public class bmuInfomation : observableObject
-	{
-		public class infoKv {
-			public string key { get; set; }
-			public string value { get; set; }
+	public class bmuInfomation : viewModelBase {
+
+		#region infoKv
+
+		public class infoKv : viewModelBase
+		{
+			private string _key, _info_value;
+
+			public string infoKey {
+				get {
+					return _key;
+				}
+				set {
+					_key = value;
+					raisePropertyChanged( "infoKey" );
+				}
+			}
+
+			public string infoValue {
+				get {
+					return _info_value;
+				}
+				set {
+					_info_value = value;
+					raisePropertyChanged( "infoValue" );
+				}
+			}
 		}
+
+		#endregion
+
+		#region select changed event
+
+		public class selectChangedEventArgs : EventArgs
+		{
+			private readonly canRxTpIfMap _tp_if_map;
+			public canRxTpIfMap tpIfMap {
+				get {
+					return _tp_if_map;
+				}
+			}
+
+			public selectChangedEventArgs(canRxTpIfMap map) {
+				_tp_if_map = map;
+			}
+		}
+
+		public event EventHandler<selectChangedEventArgs> onSelectedEvent;
+		public void selected_changed_notify(canRxTpIfMap map) {
+			if (null == onSelectedEvent)
+				return;
+
+			var receivers = onSelectedEvent.GetInvocationList();
+			var args = new selectChangedEventArgs(map);
+			foreach (var x in receivers) {
+				var receiver = x as EventHandler<selectChangedEventArgs>;
+				if (null == receiver)
+					continue;
+
+				receiver.BeginInvoke(this, args, null, null);
+			}
+		}
+
+		#endregion
 
 		// bmu's realtime status
 		//  DataGrid: http://www.cnblogs.com/sbgh/p/6841285.html
@@ -106,7 +165,7 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 
 		private string get_stt(string key) {
 			foreach (var x in _bcu_stt_list) {
-				if (x.key == key) return x.value;
+				if (x.infoKey == key) return x.infoValue;
 			}
 
 			return string.Empty;
@@ -114,19 +173,18 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 
 		private void set_stt( string key, string v ) {
 			foreach (var x in _bcu_stt_list) {
-				if (x.key != key) continue;	
-				x.value = v;
-				raisePropertyChanged("bcuSttList");
+				if (x.infoKey != key) continue;	
+				x.infoValue = v;
 			}
 		}
 
 		private bool kv_info_key_exist(string key) {
-			var temp = _bcu_stt_list.FirstOrDefault(x => x.key == key);
+			var temp = _bcu_stt_list.FirstOrDefault(x => x.infoKey == key);
 			return (null != temp) ? true : false;
 		}
 
 		private infoKv create_kv_info(string key, string defValue) {
-			var temp = new infoKv {key = key, value = defValue};
+			var temp = new infoKv {infoKey = key, infoValue = defValue};
 			return temp;
 		}
 
@@ -202,6 +260,8 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 
 				_selected_tp_if_map = value;
 				raisePropertyChanged( "selectedTpIfMap" );
+				selected_changed_notify(_selected_tp_if_map);
+
 				if ( null != _selected_tp_if_map ) {
 					var str = string.Format( "bmuInfomation {0}, selected canId changed: 0x{1:x}",
 						_priority, _selected_tp_if_map.canId );
@@ -209,6 +269,8 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 				}
 			}
 		}
+
+		public canRxTpIfMap usedTpIfMap { get; set; }
 
 		private readonly int _priority;
 		public bmuInfomation(ObservableCollection<canRxTpIfMap> mapList, int priority ) {
@@ -219,21 +281,26 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 		}
 	}
 	
-	public class bmuCollectionViewModel /*: observableObject*/
+	public class bmuCollectionViewModel : viewModelBase
 	{
 		private ObservableCollection<canRxTpIfMap> _rx_tp_if_map_list;
 		private ObservableCollection<bmuInfomation> _bmu_info_list;
 		private readonly UDSComm _uds_comm;
 
 		public delegateCommandNoParameter broadcastCommand { get; set; }
+		public delegateCommandNoParameter setAllBmuIdCommand { get; set; }
 
 		public ObservableCollection<bmuInfomation> bmuList {
 			get {
 				return _bmu_info_list;
 			}
 			set {
-				if (null != value)
+				if (null != value) {
 					_bmu_info_list = value;
+					foreach (var x in _bmu_info_list) {
+						x.onSelectedEvent += on_bmu_selected_id_changed;
+					}
+				}
 			}
 		}
 
@@ -251,7 +318,18 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 			}
 		}
 
-		public enum runStateEnum { idle, bc_before_canid_first_alloc, canid_first_alloc, bc_after_first_canid_alloc }
+		private string _run_error_info;
+		public string runErrorInfomation {
+			get {
+				return _run_error_info;
+			}
+			set {
+				_run_error_info = value;
+				raisePropertyChanged("runErrorInfomation" );
+			}
+		}
+
+		public enum runStateEnum { idle, bc_before_canid_first_alloc, canid_first_alloc, get_bmu_info, set_all_bmu_id }
 		private runStateEnum _run_state = runStateEnum.idle;
 
 		public bmuCollectionViewModel( ObservableCollection<canRxTpIfMap> tpIfMapList) {
@@ -260,69 +338,85 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 			_uds_comm = UDSComm.getInstance();
 
 			broadcastCommand = new delegateCommandNoParameter {
-				_execute_command = new Action(start_broadcast),
-				_can_execute_command = new Func<bool>(is_broadcast_bw_stopped)
+				_execute_command = new Action(broadcast_get_canid_async),
+				_can_execute_command = new Func<bool>(is_can_run_broadcast_task)
+			};
+
+			setAllBmuIdCommand = new delegateCommandNoParameter {
+				_execute_command = new Action(set_all_bmu_id_async),
+				_can_execute_command = new Func<bool>(is_can_run_bmu_user_sel_id_task)
 			};
 		}
 
-		public void test_add_bmu() {
-            broadcastCommand.raiseCanExecuteChanged();
-			this.bmuList.Add(new bmuInfomation(rxTpIfMapList, bmuList.Count));
+		private void on_bmu_selected_id_changed(object sender, bmuInfomation.selectChangedEventArgs args) {
+			setAllBmuIdCommand.raiseCanExecuteChanged();
 		}
 
-		private bool is_broadcast_bw_stopped() {
+		private bool is_can_run_broadcast_task() {
 			if (_run_state == runStateEnum.idle)
 				return true;
 			return false;
 		}
 
+		private bool is_can_run_bmu_user_sel_id_task() {
+			if (null == bmuList || bmuList.Count == 0)
+				return false;
+			if (_run_state != runStateEnum.idle)
+				return false;
+
+			var bmu_tp_if_map_list = (from x in bmuList where null != x.selectedTpIfMap select x.selectedTpIfMap).ToList();
+			return bmu_tp_if_map_list.Select(x => bmu_tp_if_map_list.FindAll(y => y.canId == x.canId))
+				.All(duplicated_list => duplicated_list.Count == 1);
+		}
+
         #region test bw
 
-        private BackgroundWorker _test_bw_worker;
-        private void test_bw_finished_event_handler(object sender, RunWorkerCompletedEventArgs e)
-        {
-            broadcastCommand.raiseCanExecuteChanged();
+		private BackgroundWorker _test_bw_worker;
+
+		private void test_bw_finished_event_handler( object sender, RunWorkerCompletedEventArgs e ) {
+			broadcastCommand.raiseCanExecuteChanged();
 			this.bmuList.Add( new bmuInfomation( rxTpIfMapList, bmuList.Count ) );
-        }
+		}
 
-        private void start_test_bw()
-        {
-            _test_bw_worker = new BackgroundWorker { WorkerSupportsCancellation = true };
-            _test_bw_worker.DoWork += bgworker_test;
-            _test_bw_worker.RunWorkerCompleted += test_bw_finished_event_handler;
-            _test_bw_worker.RunWorkerAsync();
-        }
+		private void start_test_bw() {
+			_test_bw_worker = new BackgroundWorker { WorkerSupportsCancellation = true };
+			_test_bw_worker.DoWork += bgworker_test;
+			_test_bw_worker.RunWorkerCompleted += test_bw_finished_event_handler;
+			_test_bw_worker.RunWorkerAsync();
+		}
 
-        private void bgworker_test(object sender, DoWorkEventArgs e)
-        {
-            var bw = sender as BackgroundWorker;
-            Thread.Sleep(300);
+		private void bgworker_test( object sender, DoWorkEventArgs e ) {
+			var bw = sender as BackgroundWorker;
+			Thread.Sleep( 300 );
 
-            if (bw.CancellationPending)
-                e.Cancel = true;
+			if ( bw.CancellationPending )
+				e.Cancel = true;
 
-            _test_bw_worker = null;
-        }
+			_test_bw_worker = null;
+		}
 
         #endregion
 
         #region 广播任务
 
-        private BackgroundWorker _broadcast_worker;
+        private BackgroundWorker _bw_broadcast_get_canid;
 
-		private bool is_broadcast_bw_running() {
+		private bool is_broadcast_get_canid_bw_running() {
 			try {
-				return (null != _broadcast_worker && _broadcast_worker.IsBusy);
+				return (null != _bw_broadcast_get_canid && _bw_broadcast_get_canid.IsBusy);
 			} catch ( Exception e ) {
-				Debug.WriteLine( e );
+				Debug.WriteLine(e);
 			}
 			return false;
 		}
 
-		private void broadcast_finished_event_handler(object sender, RunWorkerCompletedEventArgs e) {
+		private void broadcast_get_canid_finished_event_handler(object sender, RunWorkerCompletedEventArgs e) {
+			runErrorInfomation = string.Empty;
+
 			if ( e.Cancelled || null != e.Error ) {
 				_run_state = runStateEnum.idle;
 				broadcastCommand.raiseCanExecuteChanged();
+				setAllBmuIdCommand.raiseCanExecuteChanged();
 				return;
 			}
 
@@ -338,10 +432,12 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 				bmuList.Clear();
 				_run_state = runStateEnum.idle;
 				broadcastCommand.raiseCanExecuteChanged();
+				setAllBmuIdCommand.raiseCanExecuteChanged();
+				runErrorInfomation = Application.Current.FindResource("str_bc_fail") as string;
 				return;
 			}
 
-			var resp_rxpduids = slave_uds_process.getSlaveResponseStrs( "CanIdV2" );
+			var resp_rxpduids = slave_uds_process.getSlaveResponseStrs("CanIdV2");
 			var rxpduid_crc_list = new List<Tuple<uint, ushort>>();
 			foreach (var x in resp_rxpduids) {
 				var temp_tp_rxpdu_list = (from y in tp_rxpdu_list select y.CanTpChannelId).ToArray();
@@ -353,14 +449,15 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 			}
 
 			slave_uds_process.Dispose();
-			start_first_alloc(uds_config, rxpduid_crc_list, null);
+			start_first_alloc_async(_uds_comm, uds_config, rxpduid_crc_list, null);
 		}
 
-		private void start_broadcast() {
+		private void broadcast_get_canid_async() {
 			_uds_comm.Stop();
+			bmuList.Clear();
 			_run_state = runStateEnum.bc_before_canid_first_alloc;
 			broadcastCommand.raiseCanExecuteChanged();
-			bmuList.Clear();
+			setAllBmuIdCommand.raiseCanExecuteChanged();
 
 			var slave_uds_process = new slaveUdsDataProcess();
 
@@ -399,27 +496,35 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 			uds_config.canif_piParam.txPdu_Host = 0x7df;
 
 			bool berr = _uds_comm.Start(uds_config, slave_uds_process.rx_indication_cbk);
-			start_broadcast_bw(broadcast_finished_event_handler, _uds_comm, uds_config, slave_uds_process);
+			if (false == berr) {
+				_run_state = runStateEnum.idle;
+				broadcastCommand.raiseCanExecuteChanged();
+				setAllBmuIdCommand.raiseCanExecuteChanged();
+				runErrorInfomation = Application.Current.FindResource("str_open_can_fail" ) as string;
+				return;
+			}
+
+			start_broadcast_get_canid_bw(broadcast_get_canid_finished_event_handler, _uds_comm, uds_config, slave_uds_process);
 		}
 
-		private void start_broadcast_bw( RunWorkerCompletedEventHandler workerCallback, UDSComm udsComm,
+		private void start_broadcast_get_canid_bw( RunWorkerCompletedEventHandler workerCallback, UDSComm udsComm,
 			UDSWrapper.Can_piParam_Type_Json udsConfig, slaveUdsDataProcess slaveUdsProcess ) {
-			if ( is_broadcast_bw_running() ) return;
-			_broadcast_worker = new BackgroundWorker {WorkerSupportsCancellation = true};
-			_broadcast_worker.DoWork += bgworker_broadcast;
-			_broadcast_worker.RunWorkerCompleted += workerCallback;
+			if ( is_broadcast_get_canid_bw_running() ) return;
+			_bw_broadcast_get_canid = new BackgroundWorker {WorkerSupportsCancellation = true};
+			_bw_broadcast_get_canid.DoWork += bw_broadcast_get_canid;
+			_bw_broadcast_get_canid.RunWorkerCompleted += workerCallback;
 			var bw_params = new object[] {udsComm, udsConfig, slaveUdsProcess};
-			_broadcast_worker.RunWorkerAsync(bw_params);
+			_bw_broadcast_get_canid.RunWorkerAsync(bw_params);
 		}
 
-		private void stop_broadcast_bw() {
-			if ( !is_broadcast_bw_running() ) return;
-			_broadcast_worker.CancelAsync();
-			while ( is_broadcast_bw_running() ) { }
-			_broadcast_worker = null;
+		private void stop_broadcast_get_canid_async() {
+			if ( !is_broadcast_get_canid_bw_running() ) return;
+			_bw_broadcast_get_canid.CancelAsync();
+			while ( is_broadcast_get_canid_bw_running() ) { }
+			_bw_broadcast_get_canid = null;
 		}
 
-		private void bgworker_broadcast(object sender, DoWorkEventArgs e) {
+		private void bw_broadcast_get_canid(object sender, DoWorkEventArgs e) {
 			var bw = sender as BackgroundWorker;
 			var bw_params = e.Argument as object[];
 			var uds_comm = bw_params[0] as UDSComm;
@@ -437,19 +542,19 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 
 			e.Result = new object[] {pattern.stateResult, uds_config, slave_uds_process};
 			if (bw.CancellationPending) e.Cancel = true;
-			_broadcast_worker = null;
+			_bw_broadcast_get_canid = null;
 		}
 
 		#endregion
 
 		#region 临时分配地址
 
-		private enum firstAllocResultEnum { alloc_success, no_need_to_alloc, fail}
-		private BackgroundWorker _first_alloc_worker;
+		private enum firstAllocResultEnum { alloc_success, no_need_to_alloc, fail }
+		private BackgroundWorker _bw_first_alloc;
 
 		private bool is_first_alloc_bw_running() {
 			try {
-				return (null != _first_alloc_worker && _first_alloc_worker.IsBusy);
+				return (null != _bw_first_alloc && _bw_first_alloc.IsBusy);
 			} catch ( Exception e ) {
 				Debug.WriteLine( e );
 			}
@@ -457,9 +562,12 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 		}
 
 		private void first_alloc_finished_event_handler( object sender, RunWorkerCompletedEventArgs e ) {
+			runErrorInfomation = string.Empty;
+
 			if ( e.Cancelled || null != e.Error ) {
 				_run_state = runStateEnum.idle;
 				broadcastCommand.raiseCanExecuteChanged();
+				setAllBmuIdCommand.raiseCanExecuteChanged();
 				return;
 			}
 
@@ -467,7 +575,7 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 			var bw_result = (firstAllocResultEnum) objs[0];
 			var uds_config = objs[1] as UDSWrapper.Can_piParam_Type_Json;
 			var old_canid_crc_list = objs[2] as List<Tuple<uint, ushort>>;
-			var new_tp_if_map_list = objs[3] as List<Tuple<byte, uint, int>>;
+			var new_rxpdu_if_map_list = objs[3] as List<Tuple<byte, uint, int>>;
 
 			rxTpIfMapList.Clear();
 			var if_rx_canid_list = uds_config.canif_piParam.pCanIf_Rxpdu_piParam_Array;
@@ -480,48 +588,49 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 			if (firstAllocResultEnum.fail == bw_result) {
 				_run_state = runStateEnum.idle;
 				broadcastCommand.raiseCanExecuteChanged();
+				setAllBmuIdCommand.raiseCanExecuteChanged();
+				runErrorInfomation = Application.Current.FindResource("str_first_alloc_fail") as string;
 				return;
 			}
 
 			var priority = 0;
-			foreach (var x in new_tp_if_map_list) {
-				var bmu_info = new bmuInfomation(rxTpIfMapList, priority++) {selectedTpIfMap = rxTpIfMapList[x.Item3]};
+			var bmu_txpduid_canid_list = new List<Tuple<byte, uint>>();
+			foreach ( var x in new_rxpdu_if_map_list ) {
+				var bmu_info =
+					new bmuInfomation(rxTpIfMapList, priority++) {
+						selectedTpIfMap = rxTpIfMapList[x.Item3],
+						usedTpIfMap = rxTpIfMapList[x.Item3]
+					};
 				this.bmuList.Add(bmu_info);
+
+				var tx_map = new Tuple<byte, uint>(
+					(byte) uds_config.cantp_piParam.pCanTp_TxNsdu_piParam_Array[x.Item3].CanTpChannelId,
+					uds_config.canif_piParam.pCanIf_Txpdu_piParam_Array[x.Item3].Canid);
+				bmu_txpduid_canid_list.Add(tx_map);
 			}
 
-			_run_state = runStateEnum.idle;
-			broadcastCommand.raiseCanExecuteChanged();
+			get_bmuinfo_async(uds_config, bmu_txpduid_canid_list, this.bmuList);
 		}
 
-		private void start_first_alloc(UDSWrapper.Can_piParam_Type_Json oldUdsConfig, 
+		private void start_first_alloc_async(UDSComm udsComm, UDSWrapper.Can_piParam_Type_Json oldUdsConfig, 
 			List<Tuple<uint, ushort>> canIdCrcList, slaveUdsDataProcess slaveUdsProcess ) {
-			_uds_comm.Stop();
+			udsComm.Stop();
 			_run_state = runStateEnum.canid_first_alloc;
 			broadcastCommand.raiseCanExecuteChanged();
+			setAllBmuIdCommand.raiseCanExecuteChanged();
 			//var slave_uds_process = new slaveUdsDataProcess();
 
-			string config_path = udsConfigPath;
-			var uds_config = UDSWrapper.Can_piParam_Type_Json.readFromJsonFile( config_path );
-			var canif_rx_pdu_list = new List<UDSWrapper.CanIf_Rxpdu_piParam_Type>();
-			var canif_tx_pdu_list = new List<UDSWrapper.CanIf_Txpdu_piParam_Type>();
-			var cantp_rx_pdu_list = new List<UDSWrapper.CanTp_RxNsdu_piParam_Type>();
-			var cantp_tx_pdu_list = new List<UDSWrapper.CanTp_TxNsdu_piParam_Type>();
-
-			for ( uint i = 0; i < 15; i++ ) {
-				canif_tx_pdu_list.Add(new UDSWrapper.CanIf_Txpdu_piParam_Type() {Canid = 0x770 + i, group = 0});
-				canif_rx_pdu_list.Add(new UDSWrapper.CanIf_Rxpdu_piParam_Type() {Canid = 0x780 + i, group = 0});
-				cantp_tx_pdu_list.Add(new UDSWrapper.CanTp_TxNsdu_piParam_Type((byte) i, (byte) i, (byte) i));
-				cantp_rx_pdu_list.Add(new UDSWrapper.CanTp_RxNsdu_piParam_Type((byte) i, (byte) i, (byte) i));
+			var uds_config = create_valid_canid_config_all_master();
+			bool berr = udsComm.Start( oldUdsConfig, null );
+			if (!berr) {
+				_run_state = runStateEnum.idle;
+				broadcastCommand.raiseCanExecuteChanged();
+				setAllBmuIdCommand.raiseCanExecuteChanged();
+				runErrorInfomation = Application.Current.FindResource("str_open_can_fail") as string;
+				return;
 			}
 
-			uds_config.enable_rx_master_cb_notify = 1;
-			uds_config.canif_piParam.pCanIf_Rxpdu_piParam_Array = canif_rx_pdu_list.ToArray();
-			uds_config.canif_piParam.pCanIf_Txpdu_piParam_Array = canif_tx_pdu_list.ToArray();
-			uds_config.cantp_piParam.pCanTp_RxNsdu_piParam_Array = cantp_rx_pdu_list.ToArray();
-			uds_config.cantp_piParam.pCanTp_TxNsdu_piParam_Array = cantp_tx_pdu_list.ToArray();
-
-			bool berr = _uds_comm.Start(oldUdsConfig, null);
-			start_first_alloc_bw(first_alloc_finished_event_handler, _uds_comm, oldUdsConfig, canIdCrcList, uds_config);
+			start_first_alloc_bw( first_alloc_finished_event_handler, udsComm, oldUdsConfig, canIdCrcList, uds_config );
 		}
 
 		private void start_first_alloc_bw( RunWorkerCompletedEventHandler workerCallback, UDSComm udsComm,
@@ -530,23 +639,23 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 			if (is_first_alloc_bw_running() )
 				return;
 
-			_first_alloc_worker = new BackgroundWorker { WorkerSupportsCancellation = true };
-			_first_alloc_worker.DoWork += bgworker_first_alloc;
-			_first_alloc_worker.RunWorkerCompleted += workerCallback;
+			_bw_first_alloc = new BackgroundWorker { WorkerSupportsCancellation = true };
+			_bw_first_alloc.DoWork += bw_first_alloc;
+			_bw_first_alloc.RunWorkerCompleted += workerCallback;
 			var bw_params = new object[] {udsComm, oldUdsConfig, canIdCrcList, udsConfig};
-			_first_alloc_worker.RunWorkerAsync(bw_params);
+			_bw_first_alloc.RunWorkerAsync(bw_params);
 		}
 
 		private void stop_first_alloc_bw() {
 			if ( !is_first_alloc_bw_running() )
 				return;
-			_first_alloc_worker.CancelAsync();
+			_bw_first_alloc.CancelAsync();
 			while (is_first_alloc_bw_running() ) {
 			}
-			_first_alloc_worker = null;
+			_bw_first_alloc = null;
 		}
 
-		private void bgworker_first_alloc( object sender, DoWorkEventArgs e ) {
+		private void bw_first_alloc( object sender, DoWorkEventArgs e ) {
 			var bw = sender as BackgroundWorker;
 			var bw_params = e.Argument as object[];
 			var uds_comm = bw_params[ 0 ] as UDSComm;
@@ -563,7 +672,7 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 			var temp_tp_rx_pduid_list = (from y in tp_rx_pduid_list select y.CanTpChannelId).ToArray();
 			var temp_if_rx_canid_list = (from y in if_rx_canid_list select y.Canid).ToArray();
 
-			var new_tp_if_list = new List<Tuple<byte, uint, int>>();
+			var new_rxpdu_if_list = new List<Tuple<byte, uint, int>>();
 
 			firstAllocResultEnum bw_result = firstAllocResultEnum.alloc_success;
 			if ( old_canid_crc_list.Count > if_rx_canid_list.Length ) {
@@ -571,14 +680,9 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 				goto end_of_process;
 			}
 
-			var canid_valid_flag = true;
-			foreach (var x in old_canid_crc_list) {
-				var temp2_list = (from y in temp_if_rx_canid_list where y == x.Item1 select y).ToArray();
-				if (temp2_list.Length != 1) {
-					canid_valid_flag = false;
-					break;
-				}
-			}
+			bool canid_valid_flag = old_canid_crc_list
+				.Select(x => (from y in temp_if_rx_canid_list where y == x.Item1 select y).ToArray())
+				.All(temp2_list => temp2_list.Length == 1);
 
 			if ( false == canid_valid_flag) {
 				byte k = 0;
@@ -595,13 +699,13 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 						continue;
 
 					uint new_canid = if_rx_canid_list[k].Canid;		// k should be equal to rxpduid
-					new_tp_if_list.Add(new Tuple<byte, uint, int>(new_rxpduid, new_canid, k));
+					new_rxpdu_if_list.Add(new Tuple<byte, uint, int>(new_rxpduid, new_canid, k));
 					k++;
 				}
 			}
 			else {
 				bw_result = firstAllocResultEnum.no_need_to_alloc;
-				new_tp_if_list.AddRange(from x in old_canid_crc_list
+				new_rxpdu_if_list.AddRange(from x in old_canid_crc_list
 					let pos = Array.IndexOf(temp_if_rx_canid_list, x.Item1)
 					select new Tuple<byte, uint, int>(temp_tp_rx_pduid_list[pos], x.Item1, pos));
 			}
@@ -609,11 +713,249 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 			Thread.Sleep(300);
 
 			end_of_process:
-			e.Result = new object[] { bw_result, uds_config, old_canid_crc_list, new_tp_if_list};
+			e.Result = new object[] { bw_result, uds_config, old_canid_crc_list, new_rxpdu_if_list};
 			if ( bw.CancellationPending )
 				e.Cancel = true;
 
-			_first_alloc_worker = null;
+			_bw_first_alloc = null;
+		}
+
+		#endregion
+
+		#region 获取从机信息
+
+		private class bmuInfoData
+		{
+			internal byte _tpid;
+			internal uint _canid;
+			internal string _sw_ver;
+			internal string _hwid;
+
+			internal bmuInfoData() {
+				_tpid = byte.MaxValue;
+				_canid = uint.MaxValue;
+				_sw_ver = _hwid = "N/A";
+			}
+		}
+
+		private BackgroundWorker _bw_bmuinfo;
+
+		private void bmuinfo_bw_finished_event_handler( object sender, RunWorkerCompletedEventArgs e ) {
+			runErrorInfomation = string.Empty;
+
+			if ( e.Cancelled || null != e.Error ) {
+				_run_state = runStateEnum.idle;
+				broadcastCommand.raiseCanExecuteChanged();
+				setAllBmuIdCommand.raiseCanExecuteChanged();
+				return;
+			}
+
+			var objs = e.Result as object[];
+			var bmus = objs[0] as ObservableCollection<bmuInfomation>;
+			var info_list = objs[1] as List<bmuInfoData>;
+
+			foreach (var x in bmus) {
+				var info = info_list.FirstOrDefault(y => null != x.selectedTpIfMap && x.selectedTpIfMap.tpId == y._tpid) ??
+							new bmuInfoData();
+				x.hwid = info._hwid;
+				x.swver = info._sw_ver;
+			}
+
+			_run_state = runStateEnum.idle;
+			broadcastCommand.raiseCanExecuteChanged();
+			setAllBmuIdCommand.raiseCanExecuteChanged();
+		}
+
+		private void get_bmuinfo_async( UDSWrapper.Can_piParam_Type_Json udsConfig,
+			List<Tuple<byte, uint>> bmuTxPduIdList, ObservableCollection<bmuInfomation> bmus) {
+			_run_state = runStateEnum.get_bmu_info;
+			broadcastCommand.raiseCanExecuteChanged();
+			setAllBmuIdCommand.raiseCanExecuteChanged();
+
+			_uds_comm.Stop();
+			_uds_comm.Start(udsConfig, null);
+			start_bmuinfo_bw(_uds_comm, bmuTxPduIdList, bmus);
+		}
+
+		private void start_bmuinfo_bw( UDSComm udsComm, List<Tuple<byte, uint>> bmuTxPduIdList,
+			ObservableCollection<bmuInfomation> bmus) {
+			_bw_bmuinfo = new BackgroundWorker { WorkerSupportsCancellation = true };
+			_bw_bmuinfo.DoWork += bgworker_bmuinfo;
+			_bw_bmuinfo.RunWorkerCompleted += bmuinfo_bw_finished_event_handler;
+			var param = new object[] {udsComm, bmuTxPduIdList, bmus};
+			_bw_bmuinfo.RunWorkerAsync(param);
+		}
+
+		private void bgworker_bmuinfo( object sender, DoWorkEventArgs e ) {
+			var bw = sender as BackgroundWorker;
+			var objs = e.Argument as object[];
+			var uds_comm = objs[0] as UDSComm;
+			var bmu_tx_pduid_list = objs[1] as List<Tuple<byte, uint>>;
+			var bmus = objs[2] as ObservableCollection<bmuInfomation>;
+
+			Thread.Sleep( 300 );
+			var info_list = new List<bmuInfoData>();
+			foreach (var x in bmu_tx_pduid_list) {
+				var info = new bmuInfoData {_tpid = x.Item1, _canid = x.Item2};
+
+				var cmd_hwid = new UDSDIDBCUHWIDString() {TimeOutMs = 100};
+				uds_comm.TransmitIgnoreHeartFailFlag(cmd_hwid, x.Item1);
+				info._hwid = cmd_hwid.getHwidString().ValueString;
+
+				var cmd_swver = new UDSDIDBCUSWVersionString() {TimeOutMs = 100};
+				uds_comm.TransmitIgnoreHeartFailFlag(cmd_swver, x.Item1);
+				info._sw_ver = cmd_swver.getSWVersionString().ValueString;
+
+				info_list.Add(info);
+			}
+
+			e.Result = new object[] {bmus, info_list};
+			if ( bw.CancellationPending )
+				e.Cancel = true;
+
+			_bw_bmuinfo = null;
+		}
+
+		#endregion
+
+		#region 设置所有BMU ID
+
+		private enum setAllBmuIdResultEnum { ok, set_fail, validate_fail }
+		private BackgroundWorker _set_all_bmu_id_bw_worker;
+
+		private void set_all_bmu_id_bw_finished_event_handler( object sender, RunWorkerCompletedEventArgs e ) {
+			runErrorInfomation = string.Empty;
+
+			if ( e.Cancelled || null != e.Error ) {
+				this.bmuList.Clear();
+				_run_state = runStateEnum.idle;
+				broadcastCommand.raiseCanExecuteChanged();
+				setAllBmuIdCommand.raiseCanExecuteChanged();
+				return;
+			}
+
+			var objs = e.Result as object[];
+			var result = (setAllBmuIdResultEnum) objs[0];
+			var uds_config = objs[1] as UDSWrapper.Can_piParam_Type_Json;
+			var bmu_rxpdu_if_map_list = objs[2] as Tuple<byte, uint>[];
+
+			if (result != setAllBmuIdResultEnum.ok) {
+				this.bmuList.Clear();
+				_run_state = runStateEnum.idle;
+				broadcastCommand.raiseCanExecuteChanged();
+				setAllBmuIdCommand.raiseCanExecuteChanged();
+				runErrorInfomation = Application.Current.FindResource("str_set_all_id_fail") as string;
+				return;
+			}
+
+			this.bmuList.Clear();
+			this.rxTpIfMapList.Clear();
+			var rxpdu_list = (from x in uds_config.cantp_piParam.pCanTp_RxNsdu_piParam_Array select x.CanTpChannelId).ToArray();
+			var rxcanid_list = (from x in uds_config.canif_piParam.pCanIf_Rxpdu_piParam_Array select x.Canid).ToArray();
+			for (int i = 0; i < rxpdu_list.Length; i++) {
+				this.rxTpIfMapList.Add(new canRxTpIfMap(rxpdu_list[i], rxcanid_list[i]));
+			}
+
+			int priority = 0;
+			var bmu_txpdu_if_map_list = new List<Tuple<byte, uint>>();
+			foreach (var x in bmu_rxpdu_if_map_list) {
+				int pos = Array.IndexOf(rxpdu_list, x.Item1);
+				var bmu = new bmuInfomation(this.rxTpIfMapList, priority++) {
+					selectedTpIfMap = this.rxTpIfMapList[pos],
+					usedTpIfMap = this.rxTpIfMapList[pos]
+				};
+				this.bmuList.Add(bmu);
+
+				var tx_map = new Tuple<byte, uint>(uds_config.cantp_piParam.pCanTp_TxNsdu_piParam_Array[pos].CanTpChannelId,
+					uds_config.canif_piParam.pCanIf_Txpdu_piParam_Array[pos].Canid);
+				bmu_txpdu_if_map_list.Add(tx_map);
+			}
+
+			get_bmuinfo_async( uds_config, bmu_txpdu_if_map_list, this.bmuList );
+		}
+
+		private void set_all_bmu_id_async() {
+			_run_state = runStateEnum.set_all_bmu_id;
+			broadcastCommand.raiseCanExecuteChanged();
+			setAllBmuIdCommand.raiseCanExecuteChanged();
+
+			Debug.Assert(bmuList.All(x => x.selectedTpIfMap != null));
+			Debug.Assert(bmuList.All(x => x.usedTpIfMap != null));
+
+			var uds_config = create_valid_canid_config_all_master();
+			var valid_tp_canid_map_list = (from x in bmuList
+				select new Tuple<byte, uint>((byte) x.usedTpIfMap.tpId, x.usedTpIfMap.canId)).ToArray();
+			var will_set_tp_canid_map_list = (from x in bmuList
+				select new Tuple<byte, uint>((byte) x.selectedTpIfMap.tpId, x.selectedTpIfMap.canId)).ToArray();
+		
+			_uds_comm.Stop();
+			bool berr = _uds_comm.Start(uds_config, null);
+			if (!berr) {
+				_run_state = runStateEnum.idle;
+				broadcastCommand.raiseCanExecuteChanged();
+				setAllBmuIdCommand.raiseCanExecuteChanged();
+				runErrorInfomation = Application.Current.FindResource("str_open_can_fail" ) as string;
+				return;
+			}
+
+			start_set_all_bmu_id_bw(_uds_comm, uds_config, valid_tp_canid_map_list, will_set_tp_canid_map_list);
+		}
+
+		private void start_set_all_bmu_id_bw(UDSComm udsComm, UDSWrapper.Can_piParam_Type_Json udsConfig, 
+			Tuple<byte, uint>[] validTpCanIdMapList, Tuple<byte, uint>[] willSetTpCanIdMapList) {
+			_set_all_bmu_id_bw_worker = new BackgroundWorker { WorkerSupportsCancellation = true };
+			_set_all_bmu_id_bw_worker.DoWork += bw_set_all_bmu_id;
+			_set_all_bmu_id_bw_worker.RunWorkerCompleted += set_all_bmu_id_bw_finished_event_handler;
+			var param = new object[] {udsComm, udsConfig, validTpCanIdMapList, willSetTpCanIdMapList};
+			_set_all_bmu_id_bw_worker.RunWorkerAsync(param);
+		}
+
+		private void bw_set_all_bmu_id( object sender, DoWorkEventArgs e ) {
+			var bw = sender as BackgroundWorker;
+			var objs = e.Argument as object[];
+			var uds_comm = objs[0] as UDSComm;
+			var uds_config = objs[1] as UDSWrapper.Can_piParam_Type_Json;
+			var valid_tp_canid_map_list = objs[2] as Tuple<byte, uint>[];
+			var will_set_tp_canid_map_list = objs[3] as Tuple<byte, uint>[];
+			Thread.Sleep(100);
+
+			var result = setAllBmuIdResultEnum.ok;
+			Debug.Assert(valid_tp_canid_map_list.Length == will_set_tp_canid_map_list.Length);
+
+			for (int i = 0; i < valid_tp_canid_map_list.Length; i++) {
+				byte newid = will_set_tp_canid_map_list[i].Item1;
+				byte usedid = valid_tp_canid_map_list[i].Item1;		// should be equal to index of array
+				var cmd_set = new UDSDIDSetCanId(newid);
+				bool bok = uds_comm.TransmitIgnoreHeartFailFlag(cmd_set, usedid);
+				if (!bok) {
+					result = setAllBmuIdResultEnum.set_fail;
+					goto end_of_process;
+				}
+			}
+
+			foreach (var x in valid_tp_canid_map_list) {
+				var cmd_reset = new UDSDIDResetBCU() {TimeOutMs = 200};
+				uds_comm.TransmitIgnoreHeartFailFlag(cmd_reset, x.Item1);
+			}
+
+			Thread.Sleep(4000);
+
+			foreach ( var x in will_set_tp_canid_map_list) {
+				var cmd_test = new UDSDIDBCUSWVersionString() {TimeOutMs = 200};
+				uds_comm.TransmitIgnoreHeartFailFlag(cmd_test, x.Item1);
+				if (cmd_test.isTimeOut) {
+					result = setAllBmuIdResultEnum.validate_fail;
+					break;
+				}
+			}
+
+			e.Result = new object[] {result, uds_config, will_set_tp_canid_map_list};
+
+			end_of_process:
+			if ( bw.CancellationPending )
+				e.Cancel = true;
+
+			_set_all_bmu_id_bw_worker = null;
 		}
 
 		#endregion
@@ -626,12 +968,39 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 
 		#endregion
 
+		#region create_valid_canid_config_all_master
+
+		private static UDSWrapper.Can_piParam_Type_Json create_valid_canid_config_all_master() {
+			string config_path = udsConfigPath;
+			var uds_config = UDSWrapper.Can_piParam_Type_Json.readFromJsonFile( config_path );
+			var canif_rx_pdu_list = new List<UDSWrapper.CanIf_Rxpdu_piParam_Type>();
+			var canif_tx_pdu_list = new List<UDSWrapper.CanIf_Txpdu_piParam_Type>();
+			var cantp_rx_pdu_list = new List<UDSWrapper.CanTp_RxNsdu_piParam_Type>();
+			var cantp_tx_pdu_list = new List<UDSWrapper.CanTp_TxNsdu_piParam_Type>();
+
+			for ( uint i = 0; i < 15; i++ ) {
+				canif_tx_pdu_list.Add( new UDSWrapper.CanIf_Txpdu_piParam_Type() { Canid = 0x770 + i, group = 0 } );
+				canif_rx_pdu_list.Add( new UDSWrapper.CanIf_Rxpdu_piParam_Type() { Canid = 0x780 + i, group = 0 } );
+				cantp_tx_pdu_list.Add( new UDSWrapper.CanTp_TxNsdu_piParam_Type( (byte)i, (byte)i, (byte)i ) );
+				cantp_rx_pdu_list.Add( new UDSWrapper.CanTp_RxNsdu_piParam_Type( (byte)i, (byte)i, (byte)i ) );
+			}
+
+			uds_config.enable_rx_master_cb_notify = 1;
+			uds_config.canif_piParam.pCanIf_Rxpdu_piParam_Array = canif_rx_pdu_list.ToArray();
+			uds_config.canif_piParam.pCanIf_Txpdu_piParam_Array = canif_tx_pdu_list.ToArray();
+			uds_config.cantp_piParam.pCanTp_RxNsdu_piParam_Array = cantp_rx_pdu_list.ToArray();
+			uds_config.cantp_piParam.pCanTp_TxNsdu_piParam_Array = cantp_tx_pdu_list.ToArray();
+
+			return uds_config;
+		}
+		#endregion
+
 	}
 
 
 	#region canRxTpIfMap / canRxConfigFile
 
-	public class canRxTpIfMap : observableObject
+	public class canRxTpIfMap : viewModelBase
 	{
 		public uint tpId { get; private set; }
 		public uint canId { get; private set; }
@@ -642,7 +1011,7 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 		}
 	}
 
-	public class canRxConfigFile : observableObject
+	public class canRxConfigFile : viewModelBase
 	{
 		public ObservableCollection<canRxTpIfMap> tpIfList { get; set; }
 

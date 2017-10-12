@@ -59,5 +59,70 @@ namespace SlaveIdConfigNet2Wpf.Properties {
                 resourceCulture = value;
             }
         }
+        
+        /// <summary>
+        ///   查找 System.Drawing.Bitmap 类型的本地化资源。
+        /// </summary>
+        internal static System.Drawing.Bitmap green_energy_symbol {
+            get {
+                object obj = ResourceManager.GetObject("green_energy_symbol", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似于 (图标) 的 System.Drawing.Icon 类型的本地化资源。
+        /// </summary>
+        internal static System.Drawing.Icon green_energy_symbol_64X64 {
+            get {
+                object obj = ResourceManager.GetObject("green_energy_symbol_64X64", resourceCulture);
+                return ((System.Drawing.Icon)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 查询从机列表失败 的本地化字符串。
+        /// </summary>
+        internal static string str_bc_fail {
+            get {
+                return ResourceManager.GetString("str_bc_fail", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 分配ID失败 的本地化字符串。
+        /// </summary>
+        internal static string str_first_alloc_fail {
+            get {
+                return ResourceManager.GetString("str_first_alloc_fail", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似  的本地化字符串。
+        /// </summary>
+        internal static string str_ok {
+            get {
+                return ResourceManager.GetString("str_ok", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 打开CAN失败 的本地化字符串。
+        /// </summary>
+        internal static string str_open_can_fail {
+            get {
+                return ResourceManager.GetString("str_open_can_fail", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 设置ID失败 的本地化字符串。
+        /// </summary>
+        internal static string str_set_all_id_fail {
+            get {
+                return ResourceManager.GetString("str_set_all_id_fail", resourceCulture);
+            }
+        }
     }
 }
