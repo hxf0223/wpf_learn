@@ -22,7 +22,7 @@ namespace SlaveIdConfigNet2Wpf.Properties {
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    internal class Resources {
+    public class Resources {
         
         private static global::System.Resources.ResourceManager resourceMan;
         
@@ -36,7 +36,7 @@ namespace SlaveIdConfigNet2Wpf.Properties {
         ///   返回此类使用的缓存的 ResourceManager 实例。
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        internal static global::System.Resources.ResourceManager ResourceManager {
+        public static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
                     global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("SlaveIdConfigNet2Wpf.Properties.Resources", typeof(Resources).Assembly);
@@ -51,7 +51,7 @@ namespace SlaveIdConfigNet2Wpf.Properties {
         ///   重写当前线程的 CurrentUICulture 属性。
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        internal static global::System.Globalization.CultureInfo Culture {
+        public static global::System.Globalization.CultureInfo Culture {
             get {
                 return resourceCulture;
             }
@@ -61,9 +61,18 @@ namespace SlaveIdConfigNet2Wpf.Properties {
         }
         
         /// <summary>
+        ///   查找类似 BMS从机ID配置工具 的本地化字符串。
+        /// </summary>
+        public static string app_title {
+            get {
+                return ResourceManager.GetString("app_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   查找 System.Drawing.Bitmap 类型的本地化资源。
         /// </summary>
-        internal static System.Drawing.Bitmap green_energy_symbol {
+        public static System.Drawing.Bitmap green_energy_symbol {
             get {
                 object obj = ResourceManager.GetObject("green_energy_symbol", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
@@ -73,7 +82,7 @@ namespace SlaveIdConfigNet2Wpf.Properties {
         /// <summary>
         ///   查找类似于 (图标) 的 System.Drawing.Icon 类型的本地化资源。
         /// </summary>
-        internal static System.Drawing.Icon green_energy_symbol_64X64 {
+        public static System.Drawing.Icon green_energy_symbol_64X64 {
             get {
                 object obj = ResourceManager.GetObject("green_energy_symbol_64X64", resourceCulture);
                 return ((System.Drawing.Icon)(obj));
@@ -83,7 +92,7 @@ namespace SlaveIdConfigNet2Wpf.Properties {
         /// <summary>
         ///   查找类似 查询从机列表失败 的本地化字符串。
         /// </summary>
-        internal static string str_bc_fail {
+        public static string str_bc_fail {
             get {
                 return ResourceManager.GetString("str_bc_fail", resourceCulture);
             }
@@ -92,7 +101,7 @@ namespace SlaveIdConfigNet2Wpf.Properties {
         /// <summary>
         ///   查找类似 分配ID失败 的本地化字符串。
         /// </summary>
-        internal static string str_first_alloc_fail {
+        public static string str_first_alloc_fail {
             get {
                 return ResourceManager.GetString("str_first_alloc_fail", resourceCulture);
             }
@@ -101,7 +110,7 @@ namespace SlaveIdConfigNet2Wpf.Properties {
         /// <summary>
         ///   查找类似  的本地化字符串。
         /// </summary>
-        internal static string str_ok {
+        public static string str_ok {
             get {
                 return ResourceManager.GetString("str_ok", resourceCulture);
             }
@@ -110,7 +119,7 @@ namespace SlaveIdConfigNet2Wpf.Properties {
         /// <summary>
         ///   查找类似 打开CAN失败 的本地化字符串。
         /// </summary>
-        internal static string str_open_can_fail {
+        public static string str_open_can_fail {
             get {
                 return ResourceManager.GetString("str_open_can_fail", resourceCulture);
             }
@@ -119,7 +128,7 @@ namespace SlaveIdConfigNet2Wpf.Properties {
         /// <summary>
         ///   查找类似 设置ID失败 的本地化字符串。
         /// </summary>
-        internal static string str_set_all_id_fail {
+        public static string str_set_all_id_fail {
             get {
                 return ResourceManager.GetString("str_set_all_id_fail", resourceCulture);
             }

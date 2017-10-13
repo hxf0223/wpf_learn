@@ -216,11 +216,11 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 		public string ain {
 			get { return get_stt(keyAin); }
 			set {
-				if ( !kv_info_key_exist(keyAin) ) {
+				/*if ( !kv_info_key_exist(keyAin) ) {
 					var temp = create_kv_info(keyAin, "N/A");
 					_bcu_stt_list.Add(temp);
 				}
-				set_stt(keyAin, value);
+				set_stt(keyAin, value);*/
 			}
 		}
 
@@ -228,11 +228,11 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 		public string din {
 			get { return get_stt(keyDin); }
 			set {
-				if ( !kv_info_key_exist(keyDin) ) {
+				/*if ( !kv_info_key_exist(keyDin) ) {
 					var temp = create_kv_info(keyDin, "N/A" );
 					_bcu_stt_list.Add( temp );
 				}
-				set_stt(keyDin, value );
+				set_stt( keyDin, value );*/
 			}
 		}
 
@@ -433,7 +433,7 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 				_run_state = runStateEnum.idle;
 				broadcastCommand.raiseCanExecuteChanged();
 				setAllBmuIdCommand.raiseCanExecuteChanged();
-				runErrorInfomation = Application.Current.FindResource("str_bc_fail") as string;
+				runErrorInfomation = Properties.Resources.ResourceManager.GetString( "str_bc_fail" );
 				return;
 			}
 
@@ -500,7 +500,7 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 				_run_state = runStateEnum.idle;
 				broadcastCommand.raiseCanExecuteChanged();
 				setAllBmuIdCommand.raiseCanExecuteChanged();
-				runErrorInfomation = Application.Current.FindResource("str_open_can_fail" ) as string;
+				runErrorInfomation = Properties.Resources.ResourceManager.GetString( "str_open_can_fail" );
 				return;
 			}
 
@@ -589,7 +589,7 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 				_run_state = runStateEnum.idle;
 				broadcastCommand.raiseCanExecuteChanged();
 				setAllBmuIdCommand.raiseCanExecuteChanged();
-				runErrorInfomation = Application.Current.FindResource("str_first_alloc_fail") as string;
+				runErrorInfomation = Properties.Resources.ResourceManager.GetString( "str_first_alloc_fail" );
 				return;
 			}
 
@@ -626,7 +626,7 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 				_run_state = runStateEnum.idle;
 				broadcastCommand.raiseCanExecuteChanged();
 				setAllBmuIdCommand.raiseCanExecuteChanged();
-				runErrorInfomation = Application.Current.FindResource("str_open_can_fail") as string;
+				runErrorInfomation = Properties.Resources.ResourceManager.GetString( "str_open_can_fail" );
 				return;
 			}
 
@@ -844,7 +844,7 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 				_run_state = runStateEnum.idle;
 				broadcastCommand.raiseCanExecuteChanged();
 				setAllBmuIdCommand.raiseCanExecuteChanged();
-				runErrorInfomation = Application.Current.FindResource("str_set_all_id_fail") as string;
+				runErrorInfomation = Properties.Resources.ResourceManager.GetString( "str_set_all_id_fail" );
 				return;
 			}
 
@@ -894,7 +894,7 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 				_run_state = runStateEnum.idle;
 				broadcastCommand.raiseCanExecuteChanged();
 				setAllBmuIdCommand.raiseCanExecuteChanged();
-				runErrorInfomation = Application.Current.FindResource("str_open_can_fail" ) as string;
+				runErrorInfomation = Properties.Resources.ResourceManager.GetString( "str_open_can_fail" );
 				return;
 			}
 

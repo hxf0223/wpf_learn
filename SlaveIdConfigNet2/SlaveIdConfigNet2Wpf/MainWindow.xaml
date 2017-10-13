@@ -5,6 +5,20 @@
         Title="BMS从机ID配置工具" Height="456" Width="658.15" 
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize">
 
+    <Window.Resources>
+        <Style  TargetType="{x:Type ListViewItem}">
+            <Style.Triggers>
+                <Trigger Property="ItemsControl.AlternationIndex" Value="0">
+                    <Setter Property="Background" Value="#19f39611"></Setter>
+                </Trigger>
+                <Trigger Property="ItemsControl.AlternationIndex" Value="1">
+                    <Setter Property="Background" Value="#19000000"></Setter>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+
     <Grid HorizontalAlignment="Stretch" ShowGridLines="False">
         <Grid.RowDefinitions>
             <RowDefinition Height="10"/>
@@ -30,9 +44,15 @@
         </Grid>
         
         <Grid Grid.Row="2" Grid.Column="1">
-            <ListBox Name="lbMain" HorizontalContentAlignment="Stretch"
-                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                <ListBox.ItemTemplate>
+            <ListView Name="lbMain" HorizontalContentAlignment="Stretch"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" AlternationCount="2">
+                <!--<ListView.ItemContainerStyle>
+                    <Style TargetType="{x:Type ListBoxItem}">
+                        <Setter Property="Focusable" Value="False"/>
+                    </Style>
+                </ListView.ItemContainerStyle>-->
+
+                <ListView.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Vertical" HorizontalAlignment="Stretch" Width="Auto">
                             <!-- bmu's id -->
@@ -55,19 +75,13 @@
 
                         </StackPanel>
                     </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
+                </ListView.ItemTemplate>
+            </ListView>
         </Grid>
         
         <Grid Grid.Row="3" Grid.Column="1">
-            <StatusBar>
+            <StatusBar DockPanel.Dock="Bottom" VerticalAlignment="Bottom">
                 <!--<StatusBarItem DockPanel.Dock="Right">
-                    <TextBlock>Go!</TextBlock>
-                </StatusBarItem>
-                <StatusBarItem DockPanel.Dock="Right">
-                    <TextBlock>Set</TextBlock>
-                </StatusBarItem>
-                <StatusBarItem DockPanel.Dock="Right">
                     <ProgressBar Value="30" Width="80" Height="18" />
                 </StatusBarItem>-->
                 

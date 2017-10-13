@@ -30,6 +30,10 @@ namespace SlaveIdConfigNet2Wpf
 			_bmu_collection_vm = new bmuCollectionViewModel(_can_rx_config_file.tpIfList);
 			lbMain.ItemsSource = _bmu_collection_vm.bmuList;
 			this.DataContext = _bmu_collection_vm;
+
+			string app_title = Properties.Resources.ResourceManager.GetString( "app_title" );
+			string app_version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+			this.Title = app_title + " V" + app_version;
 		}
 
 
