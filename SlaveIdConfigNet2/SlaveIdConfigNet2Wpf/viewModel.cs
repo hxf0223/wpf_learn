@@ -144,7 +144,8 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 				if (null == receiver)
 					continue;
 
-				receiver.BeginInvoke(this, args, null, null);
+				//receiver.BeginInvoke(this, args, null, null);
+				receiver.Invoke( this, args );
 			}
 		}
 
@@ -216,11 +217,11 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 		public string ain {
 			get { return get_stt(keyAin); }
 			set {
-				/*if ( !kv_info_key_exist(keyAin) ) {
+				if ( !kv_info_key_exist(keyAin) ) {
 					var temp = create_kv_info(keyAin, "N/A");
 					_bcu_stt_list.Add(temp);
 				}
-				set_stt(keyAin, value);*/
+				set_stt(keyAin, value);
 			}
 		}
 
@@ -228,11 +229,11 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 		public string din {
 			get { return get_stt(keyDin); }
 			set {
-				/*if ( !kv_info_key_exist(keyDin) ) {
+				if ( !kv_info_key_exist(keyDin) ) {
 					var temp = create_kv_info(keyDin, "N/A" );
 					_bcu_stt_list.Add( temp );
 				}
-				set_stt( keyDin, value );*/
+				set_stt( keyDin, value );
 			}
 		}
 
@@ -297,9 +298,9 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 			set {
 				if (null != value) {
 					_bmu_info_list = value;
-					foreach (var x in _bmu_info_list) {
+					/*foreach (var x in _bmu_info_list) {
 						x.onSelectedEvent += on_bmu_selected_id_changed;
-					}
+					}*/
 				}
 			}
 		}
@@ -325,7 +326,7 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 			}
 			set {
 				_run_error_info = value;
-				raisePropertyChanged("runErrorInfomation" );
+				raisePropertyChanged( "runErrorInfomation" );
 			}
 		}
 
@@ -438,18 +439,18 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 			}
 
 			var resp_rxpduids = slave_uds_process.getSlaveResponseStrs("CanIdV2");
-			var rxpduid_crc_list = new List<Tuple<uint, ushort>>();
+			var resp_rxpduid_crc_list = new List<Tuple<uint, ushort>>();
 			foreach (var x in resp_rxpduids) {
 				var temp_tp_rxpdu_list = (from y in tp_rxpdu_list select y.CanTpChannelId).ToArray();
 				int pos = Array.IndexOf(temp_tp_rxpdu_list, x.Key );
 				if (pos >= 0 && pos < if_canid_list.Length) {
 					ushort crc = ushort.Parse(x.Value);
-					rxpduid_crc_list.Add(new Tuple<uint, ushort>(if_canid_list[pos].Canid, crc));
+					resp_rxpduid_crc_list.Add(new Tuple<uint, ushort>(if_canid_list[pos].Canid, crc));
 				}
 			}
 
 			slave_uds_process.Dispose();
-			start_first_alloc_async(_uds_comm, uds_config, rxpduid_crc_list, null);
+			start_first_alloc_async(_uds_comm, uds_config, resp_rxpduid_crc_list, null);
 		}
 
 		private void broadcast_get_canid_async() {
@@ -462,38 +463,7 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 			var slave_uds_process = new slaveUdsDataProcess();
 
 			var config_path = udsConfigPath;
-			var uds_config = UDSWrapper.Can_piParam_Type_Json.readFromJsonFile(config_path);
-			var canif_rx_pdu_list = new List<UDSWrapper.CanIf_Rxpdu_piParam_Type>();
-			var canif_tx_pdu_list = new List<UDSWrapper.CanIf_Txpdu_piParam_Type>();
-			var cantp_rx_pdu_list = new List<UDSWrapper.CanTp_RxNsdu_piParam_Type>();
-			var cantp_tx_pdu_list = new List<UDSWrapper.CanTp_TxNsdu_piParam_Type>();
-
-			byte i = 0;
-			for (i = 0; i < 15; i++) {
-				canif_tx_pdu_list.Add(new UDSWrapper.CanIf_Txpdu_piParam_Type() {Canid = 0x770 + (uint) i, group = 0});
-				cantp_tx_pdu_list.Add(new UDSWrapper.CanTp_TxNsdu_piParam_Type(i, i, i));
-			}
-			canif_tx_pdu_list.Add(new UDSWrapper.CanIf_Txpdu_piParam_Type() {Canid = 0x747, group = 0});
-			cantp_tx_pdu_list.Add( new UDSWrapper.CanTp_TxNsdu_piParam_Type( i, i, i ) );
-			i++;
-
-			canif_tx_pdu_list.Add(new UDSWrapper.CanIf_Txpdu_piParam_Type() {Canid = 0x7df, group = 0});
-			cantp_tx_pdu_list.Add(new UDSWrapper.CanTp_TxNsdu_piParam_Type(i, i, i));
-
-
-			for ( i = 0; i < 15; i++ ) {
-				canif_rx_pdu_list.Add(new UDSWrapper.CanIf_Rxpdu_piParam_Type() {Canid = 0x780 + (uint)i, group = 0});
-				cantp_rx_pdu_list.Add(new UDSWrapper.CanTp_RxNsdu_piParam_Type(i, i, i));
-			}
-			canif_rx_pdu_list.Add(new UDSWrapper.CanIf_Rxpdu_piParam_Type() {Canid = 0x74f, group = 0});
-			cantp_rx_pdu_list.Add(new UDSWrapper.CanTp_RxNsdu_piParam_Type(i, i, i));
-
-			uds_config.enable_rx_master_cb_notify = 1;
-			uds_config.canif_piParam.pCanIf_Rxpdu_piParam_Array = canif_rx_pdu_list.ToArray();
-			uds_config.canif_piParam.pCanIf_Txpdu_piParam_Array = canif_tx_pdu_list.ToArray();
-			uds_config.cantp_piParam.pCanTp_RxNsdu_piParam_Array = cantp_rx_pdu_list.ToArray();
-			uds_config.cantp_piParam.pCanTp_TxNsdu_piParam_Array = cantp_tx_pdu_list.ToArray();
-			uds_config.canif_piParam.txPdu_Host = 0x7df;
+			var uds_config = create_broadcast_canid_config_all_master();
 
 			bool berr = _uds_comm.Start(uds_config, slave_uds_process.rx_indication_cbk);
 			if (false == berr) {
@@ -549,7 +519,7 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 
 		#region 临时分配地址
 
-		private enum firstAllocResultEnum { alloc_success, no_need_to_alloc, fail }
+		private enum firstAllocResultEnum { alloc_success, no_need_to_alloc, fail, check_after_alloc_fail }
 		private BackgroundWorker _bw_first_alloc;
 
 		private bool is_first_alloc_bw_running() {
@@ -601,6 +571,7 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 						selectedTpIfMap = rxTpIfMapList[x.Item3],
 						usedTpIfMap = rxTpIfMapList[x.Item3]
 					};
+				bmu_info.onSelectedEvent += on_bmu_selected_id_changed;
 				this.bmuList.Add(bmu_info);
 
 				var tx_map = new Tuple<byte, uint>(
@@ -609,7 +580,7 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 				bmu_txpduid_canid_list.Add(tx_map);
 			}
 
-			get_bmuinfo_async(uds_config, bmu_txpduid_canid_list, this.bmuList);
+			get_bmuinfo_async( uds_config, bmu_txpduid_canid_list );
 		}
 
 		private void start_first_alloc_async(UDSComm udsComm, UDSWrapper.Can_piParam_Type_Json oldUdsConfig, 
@@ -680,12 +651,20 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 				goto end_of_process;
 			}
 
-			bool canid_valid_flag = old_canid_crc_list
-				.Select(x => (from y in temp_if_rx_canid_list where y == x.Item1 select y).ToArray())
-				.All(temp2_list => temp2_list.Length == 1);
+			bool canid_valid_flag = true;
+			foreach ( var x in old_canid_crc_list ) {
+				var valid_pos = Array.IndexOf( temp_if_rx_canid_list, x.Item1 );
+				var dup_list = (from y in old_canid_crc_list where y.Item1 == x.Item1 select y.Item1).ToList();
+				if ( valid_pos < 0 || dup_list.Count > 1 ) {
+					canid_valid_flag = false;
+					break;
+				}
+			}
 
 			if ( false == canid_valid_flag) {
 				byte k = 0;
+				var new_check_canid_crc_list = new List<Tuple<uint, ushort>>();
+
 				foreach (var x in old_canid_crc_list) {
 					var temp_old_if_rx_list = (from y in old_if_rx_canid_list select y.Canid).ToArray();
 					int pos = Array.IndexOf(temp_old_if_rx_list, x.Item1 );
@@ -694,14 +673,12 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 
 					byte new_rxpduid = tp_rx_pduid_list[k].CanTpChannelId;
 					var cmd_set_canidv2 = new UDSDIDSetCanIdV2(new_rxpduid, x.Item2) {TimeOutMs = 100};
-					uds_comm.TransmitIgnoreHeartFailFlag(cmd_set_canidv2, (byte) pos);
-					if (!cmd_set_canidv2.isPositiveResponse)
-						continue;
+					uds_comm.TransmitIgnoreHeartFailFlag( cmd_set_canidv2, new_rxpduid );
 
 					uint new_canid = if_rx_canid_list[k].Canid;		// k should be equal to rxpduid
-					new_rxpdu_if_list.Add(new Tuple<byte, uint, int>(new_rxpduid, new_canid, k));
-					k++;
-				}
+					new_rxpdu_if_list.Add(new Tuple<byte, uint, int>(new_rxpduid, new_canid, k++));
+					new_check_canid_crc_list.Add( new Tuple<uint, ushort>( new_canid, x.Item2 ) );
+				}				
 			}
 			else {
 				bw_result = firstAllocResultEnum.no_need_to_alloc;
@@ -712,12 +689,63 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 
 			Thread.Sleep(300);
 
+			if ( check_after_first_alloc( uds_comm, old_canid_crc_list ) == firstAllocResultEnum.check_after_alloc_fail ) {
+				bw_result = firstAllocResultEnum.check_after_alloc_fail;
+			}
+			uds_comm.Start( uds_config, null );		// restore valid canid config
+
 			end_of_process:
 			e.Result = new object[] { bw_result, uds_config, old_canid_crc_list, new_rxpdu_if_list};
 			if ( bw.CancellationPending )
 				e.Cancel = true;
 
 			_bw_first_alloc = null;
+		}
+
+		private firstAllocResultEnum check_after_first_alloc( UDSComm udsComm, List<Tuple<uint, ushort>> checkCrcCanIdList ) {
+			udsComm.Stop();
+			var slave_uds_data_process = new slaveUdsDataProcess();
+			var temp_uds_config = create_broadcast_canid_config_all_master();
+			var temp_uds_rxpduids = (from x in temp_uds_config.cantp_piParam.pCanTp_RxNsdu_piParam_Array select x.CanTpChannelId).ToArray();
+			var temp_uds_rxcanids = (from x in temp_uds_config.canif_piParam.pCanIf_Rxpdu_piParam_Array select x.Canid).ToArray();
+			udsComm.Start( temp_uds_config, slave_uds_data_process.rx_indication_cbk );
+
+			firstAllocResultEnum check_result = firstAllocResultEnum.alloc_success;
+			var cmd_bc = new UDSDIDQueryCanIdV2 { TimeOutMs = 200 };
+			udsComm.TransmitIgnoreHeartFailFlag( cmd_bc );
+			Thread.Sleep( 300 );		// wait for broadcast receive done
+
+			var resp_rxpduids = slave_uds_data_process.getSlaveResponseStrs( "CanIdV2" );
+			var resp_rxpduid_crc_list = new List<Tuple<uint, ushort>>();
+			foreach ( var x in resp_rxpduids ) {
+				int pos = Array.IndexOf( temp_uds_rxpduids, x.Key );
+				if ( pos < 0 ) {
+					check_result = firstAllocResultEnum.check_after_alloc_fail;
+					break;
+				}
+
+				var temp_canid = temp_uds_rxcanids[ pos ];
+				ushort crc = ushort.Parse( x.Value );
+				resp_rxpduid_crc_list.Add( new Tuple<uint, ushort>( temp_canid, crc ) );
+			}
+
+			var check_canid_arr = (from x in checkCrcCanIdList select x.Item1).ToArray();
+			var check_crc_arr = (from x in checkCrcCanIdList select x.Item2).ToArray();
+			if ( resp_rxpduid_crc_list.Count == check_canid_arr.Length ) {
+				foreach ( var x in resp_rxpduid_crc_list ) {
+					int pos = Array.IndexOf( check_canid_arr, x.Item1 );
+					if ( pos < 0 || check_crc_arr[ pos ] != x.Item2 ) {
+						check_result = firstAllocResultEnum.check_after_alloc_fail;
+						break;
+					}
+				}
+			} else {
+				check_result = firstAllocResultEnum.check_after_alloc_fail;
+			}
+
+			udsComm.Stop();
+			slave_uds_data_process.Dispose();
+			return check_result;
 		}
 
 		#endregion
@@ -730,11 +758,14 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 			internal uint _canid;
 			internal string _sw_ver;
 			internal string _hwid;
+			internal string _di;
+			internal string _ai;
 
 			internal bmuInfoData() {
 				_tpid = byte.MaxValue;
 				_canid = uint.MaxValue;
 				_sw_ver = _hwid = "N/A";
+				_di = _ai = "N/A";
 			}
 		}
 
@@ -751,14 +782,16 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 			}
 
 			var objs = e.Result as object[];
-			var bmus = objs[0] as ObservableCollection<bmuInfomation>;
-			var info_list = objs[1] as List<bmuInfoData>;
+			//var bmus = objs[0] as ObservableCollection<bmuInfomation>;
+			var info_list = objs[0] as List<bmuInfoData>;
 
-			foreach (var x in bmus) {
+			foreach (var x in this.bmuList) {
 				var info = info_list.FirstOrDefault(y => null != x.selectedTpIfMap && x.selectedTpIfMap.tpId == y._tpid) ??
 							new bmuInfoData();
 				x.hwid = info._hwid;
 				x.swver = info._sw_ver;
+				x.din = info._di;
+				x.ain = info._ai;
 			}
 
 			_run_state = runStateEnum.idle;
@@ -767,22 +800,21 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 		}
 
 		private void get_bmuinfo_async( UDSWrapper.Can_piParam_Type_Json udsConfig,
-			List<Tuple<byte, uint>> bmuTxPduIdList, ObservableCollection<bmuInfomation> bmus) {
+			List<Tuple<byte, uint>> bmuTxPduIdList) {
 			_run_state = runStateEnum.get_bmu_info;
 			broadcastCommand.raiseCanExecuteChanged();
 			setAllBmuIdCommand.raiseCanExecuteChanged();
 
 			_uds_comm.Stop();
 			_uds_comm.Start(udsConfig, null);
-			start_bmuinfo_bw(_uds_comm, bmuTxPduIdList, bmus);
+			start_bmuinfo_bw(_uds_comm, bmuTxPduIdList);
 		}
 
-		private void start_bmuinfo_bw( UDSComm udsComm, List<Tuple<byte, uint>> bmuTxPduIdList,
-			ObservableCollection<bmuInfomation> bmus) {
+		private void start_bmuinfo_bw( UDSComm udsComm, List<Tuple<byte, uint>> bmuTxPduIdList) {
 			_bw_bmuinfo = new BackgroundWorker { WorkerSupportsCancellation = true };
 			_bw_bmuinfo.DoWork += bgworker_bmuinfo;
 			_bw_bmuinfo.RunWorkerCompleted += bmuinfo_bw_finished_event_handler;
-			var param = new object[] {udsComm, bmuTxPduIdList, bmus};
+			var param = new object[] { udsComm, bmuTxPduIdList };
 			_bw_bmuinfo.RunWorkerAsync(param);
 		}
 
@@ -791,7 +823,8 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 			var objs = e.Argument as object[];
 			var uds_comm = objs[0] as UDSComm;
 			var bmu_tx_pduid_list = objs[1] as List<Tuple<byte, uint>>;
-			var bmus = objs[2] as ObservableCollection<bmuInfomation>;
+			//var bmus = objs[2] as ObservableCollection<bmuInfomation>;
+
 
 			Thread.Sleep( 300 );
 			var info_list = new List<bmuInfoData>();
@@ -806,10 +839,27 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 				uds_comm.TransmitIgnoreHeartFailFlag(cmd_swver, x.Item1);
 				info._sw_ver = cmd_swver.getSWVersionString().ValueString;
 
+				var cmd_di = new UDSDIDDiStatusList() { TimeOutMs = 100 };
+				uds_comm.TransmitIgnoreHeartFailFlag( cmd_di, x.Item1 );
+				var di_arr = cmd_di.getList();
+				if ( di_arr.Length > 0 && di_arr[ 0 ].isDataOk ) {
+					info._di = (bool)di_arr[ 0 ].value ? "高" : "低";
+				} else {
+					info._di = new udsBool().ToString();
+				}
+
+				var cmd_ai = new UDSDIDAiStatusList() { TimeOutMs = 100 };
+				uds_comm.TransmitIgnoreHeartFailFlag( cmd_ai, x.Item1 );
+				if ( cmd_ai.getList().Length > 0 ) {
+					info._ai = cmd_ai.getList()[ 0 ].ValueString;
+				} else {
+					info._ai = udsIndVoltage.InstanceNA().ValueString;
+				}
+
 				info_list.Add(info);
 			}
 
-			e.Result = new object[] {bmus, info_list};
+			e.Result = new object[] { info_list };
 			if ( bw.CancellationPending )
 				e.Cancel = true;
 
@@ -871,7 +921,7 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 				bmu_txpdu_if_map_list.Add(tx_map);
 			}
 
-			get_bmuinfo_async( uds_config, bmu_txpdu_if_map_list, this.bmuList );
+			get_bmuinfo_async( uds_config, bmu_txpdu_if_map_list );
 		}
 
 		private void set_all_bmu_id_async() {
@@ -968,7 +1018,7 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 
 		#endregion
 
-		#region create_valid_canid_config_all_master
+		#region 创建UDS节点配置
 
 		private static UDSWrapper.Can_piParam_Type_Json create_valid_canid_config_all_master() {
 			string config_path = udsConfigPath;
@@ -986,6 +1036,7 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 			}
 
 			uds_config.enable_rx_master_cb_notify = 1;
+			uds_config.canif_piParam.txPdu_Host = 0x7df;
 			uds_config.canif_piParam.pCanIf_Rxpdu_piParam_Array = canif_rx_pdu_list.ToArray();
 			uds_config.canif_piParam.pCanIf_Txpdu_piParam_Array = canif_tx_pdu_list.ToArray();
 			uds_config.cantp_piParam.pCanTp_RxNsdu_piParam_Array = cantp_rx_pdu_list.ToArray();
@@ -993,6 +1044,36 @@ namespace SlaveIdConfigNet2Wpf.viewModel
 
 			return uds_config;
 		}
+
+		private static UDSWrapper.Can_piParam_Type_Json create_broadcast_canid_config_all_master() {
+			var uds_config = create_valid_canid_config_all_master();
+			var canif_rx_pdu_list = uds_config.canif_piParam.pCanIf_Rxpdu_piParam_Array.ToList();
+			var canif_tx_pdu_list = uds_config.canif_piParam.pCanIf_Txpdu_piParam_Array.ToList();
+			var cantp_rx_pdu_list = uds_config.cantp_piParam.pCanTp_RxNsdu_piParam_Array.ToList();
+			var cantp_tx_pdu_list = uds_config.cantp_piParam.pCanTp_TxNsdu_piParam_Array.ToList();
+
+			// add tx group
+			byte count = (byte)canif_tx_pdu_list.Count;
+			canif_tx_pdu_list.Add( new UDSWrapper.CanIf_Txpdu_piParam_Type() { Canid = 0x747, group = 0 } );
+			cantp_tx_pdu_list.Add( new UDSWrapper.CanTp_TxNsdu_piParam_Type( count, count, count ) );
+			count++;
+
+			canif_tx_pdu_list.Add( new UDSWrapper.CanIf_Txpdu_piParam_Type() { Canid = 0x7df, group = 0 } );
+			cantp_tx_pdu_list.Add( new UDSWrapper.CanTp_TxNsdu_piParam_Type( count, count, count ) );
+
+			// add rx group
+			count = (byte)canif_rx_pdu_list.Count;
+			canif_rx_pdu_list.Add( new UDSWrapper.CanIf_Rxpdu_piParam_Type() { Canid = 0x74f, group = 0 } );
+			cantp_rx_pdu_list.Add( new UDSWrapper.CanTp_RxNsdu_piParam_Type( count, count, count ) );
+
+			uds_config.canif_piParam.pCanIf_Rxpdu_piParam_Array = canif_rx_pdu_list.ToArray();
+			uds_config.canif_piParam.pCanIf_Txpdu_piParam_Array = canif_tx_pdu_list.ToArray();
+			uds_config.cantp_piParam.pCanTp_RxNsdu_piParam_Array = cantp_rx_pdu_list.ToArray();
+			uds_config.cantp_piParam.pCanTp_TxNsdu_piParam_Array = cantp_tx_pdu_list.ToArray();
+
+			return uds_config;
+		}
+
 		#endregion
 
 	}

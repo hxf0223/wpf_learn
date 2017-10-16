@@ -58,7 +58,7 @@ namespace slave_uds
 
 			_tmr2 = new System.Windows.Threading.DispatcherTimer() {Interval = new TimeSpan(0, 0, 2)};
 			_tmr2.Tick += timer2_Tick;
-			//_tmr2.Start();
+			_tmr2.Start();
 
 		}
 
@@ -271,7 +271,7 @@ namespace slave_uds
 	{
 		public byte[] cmd { get; private set; }
 		public byte[] pRespHead { get; private set; }
-		public sortableDidResponse[] respArray { get; private set; }
+		public sortableDidResponse[] respArray { get; protected set; }
 		public string hint { get; private set; }
 
 		public const byte positiveResponseAddValue = 0x40;
@@ -415,6 +415,16 @@ namespace slave_uds
 	{
 		public sortableDidCmdCanIdV2()
 			: base( new UDSDIDQueryCanIdV2(), "CanIdV2" ) {
+		}
+
+		public override void update( sortableDidResponse resp ) {
+			if ( null == resp ) return;
+			if ( !isThisCommandResp( resp.response ) ) return;
+
+			var list = respArray.ToList();
+			list.Add( resp.Clone() );
+			list.Sort( ( x, y ) => x.rxPduId.CompareTo( y.rxPduId ) );
+			respArray = list.ToArray();
 		}
 
 		public override List<KeyValuePair<byte, string>> getRespStringList() {
